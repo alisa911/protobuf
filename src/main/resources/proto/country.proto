@@ -1,0 +1,24 @@
+syntax = "proto2";
+
+package protobuf;
+
+option java_package = "protobuf";
+option java_outer_classname = "RegionProtos";
+
+message Region {
+  required string name = 1;
+  optional string lang = 2;
+  optional string type = 3;
+  optional string roads = 4;
+  optional string translate = 5;
+  optional string srtm = 6;
+  optional string hillshade = 7;
+  optional string wiki = 8;
+  message Point {
+    required double lat = 9;
+    required double lon = 10;
+  }
+  repeated Point point = 11;
+}
+
+

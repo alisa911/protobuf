@@ -9,6 +9,4 @@ public class Solution {
         protobufProvider.findCountryByName(ProtobufProviderImpl.RESULT_FILE, "belarus");
         protobufProvider.findCountryByPoint(ProtobufProviderImpl.RESULT_FILE, 30.710000, 54.840000);
     }
-
-
 }

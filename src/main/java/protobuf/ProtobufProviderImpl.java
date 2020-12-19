@@ -23,8 +23,6 @@ import java.util.stream.Collectors;
 
 public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Region> {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(ProtobufProviderImpl.class);
-
     public static final File RESULT_FILE = new File("./src/main/resources/result");
     private static final String URL_REGIONS = "https://drive.google.com/u/0/uc?id=1LtPDgdUjAv9xEESDqZcrM5VJ1-EpPVaQ&export-download";
     private static final HashSet<String> COUNTRY_NAMES = new HashSet<>();
@@ -90,16 +88,16 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
         } catch (IOException e) {
             e.printStackTrace();
         }
-        LOGGER.info("read country from file={}", countryNames.toString());
+        System.out.println("read country from file= "+countryNames.toString());
         return countryNames;
     }
 
     private void logStat(File result, long bytesRead) {
         long sizeFile = result.length();
-        LOGGER.info("sizeFile sizeFile={}", sizeFile);
+        System.out.println("sizeFile sizeFile= "+sizeFile);
         double per = (double) bytesRead * 100 / sizeFile;
-        LOGGER.info("read bytes from file={}", bytesRead);
-        LOGGER.info("percent={}", String.format("%.2f", per));
+        System.out.println("read bytes from file= "+bytesRead);
+        System.out.println("percent= "+String.format("%.2f", per));
     }
 
     private boolean isPointInPolygon(double lat, double lon, List<RegionProtos.Region.Point> polygon) {

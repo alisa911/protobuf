@@ -3,6 +3,8 @@ package protobuf;
 import net.lingala.zip4j.ZipFile;
 import org.apache.commons.io.input.CountingInputStream;
 import org.jsoup.Jsoup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
@@ -20,6 +22,8 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Region> {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ProtobufProviderImpl.class);
 
     public static final File RESULT_FILE = new File("./src/main/resources/result");
     private static final String URL_REGIONS = "https://drive.google.com/u/0/uc?id=1LtPDgdUjAv9xEESDqZcrM5VJ1-EpPVaQ&export-download";
@@ -51,16 +55,15 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
             CountingInputStream countingStream = new CountingInputStream(stream);
             do {
                 region = RegionProtos.Region.parseDelimitedFrom(countingStream);
+                long bytesRead = countingStream.getCount();
                 if (region.getName().equals(countryName)) {
-                    long bytesRead = countingStream.getCount();
-                    System.out.println("read bytes from file: " + bytesRead);
+                    logStat(result, bytesRead);
                     break;
                 }
             } while (true);
         } catch (IOException e) {
             e.printStackTrace();
         }
-
         return region;
     }
 
@@ -72,7 +75,7 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
             FileInputStream stream = new FileInputStream(result);
             CountingInputStream countingStream = new CountingInputStream(stream);
             region = RegionProtos.Region.parseDelimitedFrom(countingStream);
-
+            long bytesRead;
             do {
                 if (region.getPointList() != null) {
                     List<RegionProtos.Region.Point> polygon = region.getPointList();
@@ -81,16 +84,22 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
                     }
                 }
                 region = RegionProtos.Region.parseDelimitedFrom(stream);
+                bytesRead = countingStream.getCount();
             } while (region != null);
-
-            long bytesRead = countingStream.getCount();
-            System.out.println("read bytes from file: " + bytesRead);
+            logStat(result, bytesRead);
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        System.out.println("read country from file: " + countryNames.toString());
+        LOGGER.info("read country from file={}", countryNames.toString());
         return countryNames;
+    }
+
+    private void logStat(File result, long bytesRead) {
+        long sizeFile = result.length();
+        LOGGER.info("sizeFile sizeFile={}", sizeFile);
+        double per = (double) bytesRead * 100 / sizeFile;
+        LOGGER.info("read bytes from file={}", bytesRead);
+        LOGGER.info("percent={}", String.format("%.2f", per));
     }
 
     private boolean isPointInPolygon(double lat, double lon, List<RegionProtos.Region.Point> polygon) {

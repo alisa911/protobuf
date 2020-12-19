@@ -23,6 +23,7 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
 
     public static final File RESULT_FILE = new File("./src/main/resources/result");
     private static final String URL_REGIONS = "https://drive.google.com/u/0/uc?id=1LtPDgdUjAv9xEESDqZcrM5VJ1-EpPVaQ&export-download";
+    private static final HashSet<String> COUNTRY_NAMES = new HashSet<>();
 
     @Override
     public void generateCountryFile() {
@@ -31,7 +32,7 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
             Document documentFromRegionsXml = loadDocumentFromUrl(urlRegionsFile);
 
             List<RegionProtos.Region.Builder> regionsProtos = parsingXml(documentFromRegionsXml);
-            List<RegionProtos.Region> regionProtosList = parsingPolygons(regionsProtos, documentFromRegionsXml);
+            List<RegionProtos.Region> regionProtosList = parsingPolygons(regionsProtos);
 
             FileOutputStream stream = new FileOutputStream(RESULT_FILE);
             for (RegionProtos.Region region : regionProtosList) {
@@ -76,7 +77,7 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
                     }
                 }
                 region = RegionProtos.Region.parseDelimitedFrom(stream);
-            }while (region != null);
+            } while (region != null);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -121,21 +122,14 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
     }
 
     private List<RegionProtos.Region.Builder> parsingXml(Document document) {
+
         NodeList regions = document.getElementsByTagName("region");
         List<RegionProtos.Region.Builder> regionProtosList = new ArrayList<>();
 
         for (int i = 0; i < regions.getLength(); i++) {
-            if (regions.item(i).getNodeType() == Node.ELEMENT_NODE) {
-                Node el = regions.item(i);
-                for (int j = 0; j < el.getChildNodes().getLength(); j++) {
-                    Node n = el.getChildNodes().item(j);
-                    if (n instanceof Element) {
-                        Element e = (Element) n;
-
-                        regionProtosList.add(createRegionByXML(e));
-
-                    }
-                }
+            Element e = (Element) regions.item(i);
+            if (regions.item(i).getParentNode().getNodeName().equals("region") && e.hasAttribute("poly_extract")) {
+                regionProtosList.add(createRegionByXML(e));
             }
         }
         return regionProtosList;
@@ -143,7 +137,9 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
 
     private RegionProtos.Region.Builder createRegionByXML(Element e) {
         RegionProtos.Region.Builder region = RegionProtos.Region.newBuilder();
-        region.setName(e.getAttribute("name"));
+        String name = e.getAttribute("name");
+        COUNTRY_NAMES.add(name);
+        region.setName(name);
         if (setField(e, "lang")) region.setLang(e.getAttribute("lang"));
         if (setField(e, "type")) region.setType(e.getAttribute("type"));
         if (setField(e, "roads")) region.setLang(e.getAttribute("roads"));
@@ -160,10 +156,9 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
         return value.length() > 0;
     }
 
-    private List<RegionProtos.Region> parsingPolygons(List<RegionProtos.Region.Builder> regionsProtos,
-                                                      Document documentFromRegionsXml) throws Exception {
+    private List<RegionProtos.Region> parsingPolygons(List<RegionProtos.Region.Builder> regionsProtos) throws Exception {
         List<File> polygons = saveZip();
-        List<File> actualPolygons = getActualPolygons(documentFromRegionsXml, polygons);
+        List<File> actualPolygons = getActualPolygons(polygons);
         List<RegionProtos.Region> regionsResult = new ArrayList<>();
         for (RegionProtos.Region.Builder builder : regionsProtos) {
             for (File file : actualPolygons) {
@@ -203,37 +198,17 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
         zipFile.extractAll(unzipPath);
     }
 
-    private List<File> getActualPolygons(Document documentFromRegionsXml, List<File> polygons) {
-        HashSet<String> countriesByXml = getRegionsByXml(documentFromRegionsXml);
+    private List<File> getActualPolygons(List<File> polygons) {
 
         List<File> actualPolygons = new ArrayList<>();
         for (File file : polygons) {
-            for (String name : countriesByXml) {
+            for (String name : COUNTRY_NAMES) {
                 if (file.getName().endsWith(name + ".poly")) {
                     actualPolygons.add(file);
                 }
             }
         }
         return actualPolygons;
-    }
-
-    private HashSet<String> getRegionsByXml(Document document) {
-        HashSet<String> names = new HashSet<>();
-        NodeList regions = document.getElementsByTagName("region");
-
-        for (int i = 0; i < regions.getLength(); i++) {
-            if (regions.item(i).getNodeType() == Node.ELEMENT_NODE) {
-                Node el = regions.item(i);
-                for (int j = 0; j < el.getChildNodes().getLength(); j++) {
-                    Node n = el.getChildNodes().item(j);
-                    if (n instanceof Element) {
-                        Element e = (Element) n;
-                        names.add(e.getAttribute("name"));
-                    }
-                }
-            }
-        }
-        return names;
     }
 
     private void getPoints(File file, RegionProtos.Region.Builder builder) {

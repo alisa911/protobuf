@@ -46,10 +46,11 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
     public RegionProtos.Region findCountryByName(File result, String countryName) {
         RegionProtos.Region region = null;
         try {
+            FileInputStream stream = new FileInputStream(result);
             do {
-                region = RegionProtos.Region.parseDelimitedFrom(new FileInputStream(result));
+                region = RegionProtos.Region.parseDelimitedFrom(stream);
                 if (region.getName().equals(countryName)) {
-                    System.out.println("read from file: \n" + region.getName());
+                    System.out.println("read from file: \n" + region.toString());
                     break;
                 }
             } while (true);

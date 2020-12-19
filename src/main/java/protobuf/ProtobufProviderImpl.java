@@ -1,10 +1,10 @@
 package protobuf;
 
 import net.lingala.zip4j.ZipFile;
+import org.apache.commons.io.input.CountingInputStream;
 import org.jsoup.Jsoup;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
-import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -48,10 +48,12 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
         RegionProtos.Region region = null;
         try {
             FileInputStream stream = new FileInputStream(result);
+            CountingInputStream countingStream = new CountingInputStream(stream);
             do {
-                region = RegionProtos.Region.parseDelimitedFrom(stream);
+                region = RegionProtos.Region.parseDelimitedFrom(countingStream);
                 if (region.getName().equals(countryName)) {
-                    System.out.println("read from file: \n" + region.toString());
+                    long bytesRead = countingStream.getCount();
+                    System.out.println("read bytes from file: " + bytesRead);
                     break;
                 }
             } while (true);
@@ -68,7 +70,9 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
         RegionProtos.Region region;
         try {
             FileInputStream stream = new FileInputStream(result);
-            region = RegionProtos.Region.parseDelimitedFrom(stream);
+            CountingInputStream countingStream = new CountingInputStream(stream);
+            region = RegionProtos.Region.parseDelimitedFrom(countingStream);
+
             do {
                 if (region.getPointList() != null) {
                     List<RegionProtos.Region.Point> polygon = region.getPointList();
@@ -78,10 +82,14 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
                 }
                 region = RegionProtos.Region.parseDelimitedFrom(stream);
             } while (region != null);
+
+            long bytesRead = countingStream.getCount();
+            System.out.println("read bytes from file: " + bytesRead);
         } catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println("read from file: \n" + countryNames.toString());
+
+        System.out.println("read country from file: " + countryNames.toString());
         return countryNames;
     }
 

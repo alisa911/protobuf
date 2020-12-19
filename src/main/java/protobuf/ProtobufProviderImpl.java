@@ -61,6 +61,46 @@ public class ProtobufProviderImpl implements ProtobufProvider<RegionProtos.Regio
         return region;
     }
 
+    @Override
+    public ArrayList<String> findCountryByPoint(File result, double lat, double lon) {
+        ArrayList<String> countryNames = new ArrayList<>();
+        RegionProtos.Region region;
+        try {
+            FileInputStream stream = new FileInputStream(result);
+            region = RegionProtos.Region.parseDelimitedFrom(stream);
+            do {
+                if (region.getPointList() != null) {
+                    List<RegionProtos.Region.Point> polygon = region.getPointList();
+                    if (isPointInPolygon(lat, lon, polygon)) {
+                        countryNames.add(region.getName());
+                    }
+                }
+                region = RegionProtos.Region.parseDelimitedFrom(stream);
+            }while (region != null);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        System.out.println("read from file: \n" + countryNames.toString());
+        return countryNames;
+    }
+
+    private boolean isPointInPolygon(double lat, double lon, List<RegionProtos.Region.Point> polygon) {
+        boolean res = false;
+        int j = polygon.size() - 1;
+
+        for (int i = 0; i < polygon.size(); i++) {
+            if ((((polygon.get(i).getLat() < lat) && (lat < polygon.get(j).getLat()))
+                    || ((polygon.get(j).getLat() < lat) && (lat < polygon.get(i).getLat()))) &&
+                    (lon > (polygon.get(j).getLon() - polygon.get(i).getLon()) * (lat - polygon.get(i).getLat())
+                            / (polygon.get(j).getLat() - polygon.get(i).getLat()) + polygon.get(i).getLon()))
+                res = !res;
+            j = i;
+        }
+
+        return res;
+    }
+
+
     private String getUrlAfterRedirect() {
         try {
             return Jsoup.connect(URL_REGIONS)
